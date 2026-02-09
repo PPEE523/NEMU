@@ -38,6 +38,29 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 #endif
   if (g_print_step) { IFDEF(CONFIG_ITRACE, puts(_this->logbuf)); }
   IFDEF(CONFIG_DIFFTEST, difftest_step(_this->pc, dnpc));
+
+  #ifdef CONFIG_WATCHPOINT
+WP *wp = head;
+while (wp) {
+    bool success = true;
+    word_t val = expr(wp->expr, &success);
+    if (!success) {
+        printf("Error evaluating watchpoint %d: %s\n", wp->NO, wp->expr);
+        wp = wp->next;
+        continue;
+    }
+
+    if (val != wp->old_value) {
+        printf("Watchpoint %d triggered: %s\n", wp->NO, wp->expr);
+        printf("Old value = %u, New value = %u\n", wp->old_value, val);
+        wp->old_value = val;  // 更新值
+        nemu_state.state = NEMU_STOP;
+    }
+
+    wp = wp->next;
+}
+#endif
+
 }
 
 static void exec_once(Decode *s, vaddr_t pc) {

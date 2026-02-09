@@ -13,20 +13,14 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include "sdb.h"
+#include "watchpoint.h"
+#include <assert.h>
+#include <string.h>
 
-#define NR_WP 32
+WP wp_pool[NR_WP] = {};
+WP *head = NULL;
+WP *free_ = NULL;
 
-typedef struct watchpoint {
-  int NO;
-  struct watchpoint *next;
-
-  /* TODO: Add more members if necessary */
-
-} WP;
-
-static WP wp_pool[NR_WP] = {};
-static WP *head = NULL, *free_ = NULL;
 
 void init_wp_pool() {
   int i;
@@ -39,5 +33,42 @@ void init_wp_pool() {
   free_ = wp_pool;
 }
 
-/* TODO: Implement the functionality of watchpoint */
+WP* new_wp() {
+  if (free_ == NULL) {
+    assert(0);   // 没有空闲监视点
+  }
 
+  WP *wp = free_;
+  free_ = free_->next;
+
+  wp->next = head; 
+  head = wp;
+
+  return wp;
+}
+
+void free_wp(WP *wp) {
+
+  if (head == NULL) {
+    assert(0);
+  }
+
+  if (head == wp) {
+    head = head->next;
+  } else {
+    WP *prev = head;
+    while (prev->next != NULL && prev->next != wp) {
+      prev = prev->next;
+    }
+
+    if (prev->next == NULL) {
+      assert(0);  // 没找到
+    }
+
+    prev->next = wp->next;
+  }
+
+
+  wp->next = free_;
+  free_ = wp;
+}
